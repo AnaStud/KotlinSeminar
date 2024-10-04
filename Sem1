@@ -1,0 +1,60 @@
+package org.example
+
+fun main() {
+    val phoneRegex = Regex("^\\+?\\d+$")
+    val emailRegex = Regex("^[a-zA-Z]+@[a-zA-Z]+\\.[a-zA-Z]+$")
+
+    println("Введите команду (введите 'help' для справки):")
+
+    while (true) {
+        val input = readlnOrNull() ?: continue
+        val commandParts = input.split(" ")
+
+        when (commandParts[0].lowercase()) {
+            "exit" -> {
+                println("Выход из программы.")
+                return
+            }
+            "help" -> {
+                println("Доступные команды:")
+                println("exit - выход из программы")
+                println("help - показать это сообщение")
+                println("add <Имя> phone <Номер телефона> - добавить номер телефона")
+                println("add <Имя> email <Адрес электронной почты> - добавить адрес электронной почты")
+            }
+            "add" -> {
+                if (commandParts.size < 4) {
+                    println("Неверная команда. Используйте 'help' для получения справки.")
+                    continue
+                }
+
+                val name = commandParts[1]
+                val type = commandParts[2]
+                val value = commandParts[3]
+
+                when (type) {
+                    "phone" -> {
+                        if (phoneRegex.matches(value)) {
+                            println("Добавлен телефон для $name: $value")
+                        } else {
+                            println("Ошибка: Неверный формат номера телефона.")
+                        }
+                    }
+                    "email" -> {
+                        if (emailRegex.matches(value)) {
+                            println("Добавлен email для $name: $value")
+                        } else {
+                            println("Ошибка: Неверный формат адреса электронной почты.")
+                        }
+                    }
+                    else -> {
+                        println("Неверный тип команды. Используйте 'help' для получения справки.")
+                    }
+                }
+            }
+            else -> {
+                println("Неверная команда. Используйте 'help' для получения справки.")
+            }
+        }
+    }
+}
