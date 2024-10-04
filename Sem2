@@ -1,0 +1,105 @@
+package org.example
+
+import kotlin.system.exitProcess
+
+// Интерфейс для команд
+sealed interface Command {
+    fun isValid(): Boolean
+}
+
+// Класс для добавления информации о человеке
+data class Person(val name: String, val phone: String? = null, val email: String? = null)
+
+// Команда для добавления информации
+sealed class AddCommand(val person: Person) : Command {
+    override fun isValid(): Boolean {
+        return when {
+            person.phone != null -> phoneRegex.matches(person.phone)
+            person.email != null -> emailRegex.matches(person.email)
+            else -> false
+        }
+    }
+
+    class Phone(person: Person) : AddCommand(person)
+    class Email(person: Person) : AddCommand(person)
+}
+
+// Команда для показа информации
+object ShowCommand : Command {
+    override fun isValid(): Boolean = true
+}
+
+// Регулярные выражения для проверки
+val phoneRegex = Regex("^\\+?\\d+$")
+val emailRegex = Regex("^[a-zA-Z]+@[a-zA-Z]+\\.[a-zA-Z]+$")
+
+// Функция для чтения команды
+fun readCommand(): Command {
+    val input = readlnOrNull() ?: return ShowCommand // Возвращаем ShowCommand, если ввод пустой
+    val commandParts = input.split(" ")
+
+    return when (commandParts[0].lowercase()) {
+        "add" -> {
+            if (commandParts.size < 4) throw IllegalArgumentException("Неверная команда.")
+            val name = commandParts[1]
+            val type = commandParts[2]
+            val value = commandParts[3]
+
+            when (type) {
+                "phone" -> AddCommand.Phone(person = Person(name, phone = value))
+                "email" -> AddCommand.Email(person = Person(name, email = value))
+                else -> throw IllegalArgumentException("Неверный тип команды.")
+            }
+        }
+        "show" -> ShowCommand
+        "exit" -> exitProcess(0)
+        "help" -> throw IllegalArgumentException("help")
+        else -> throw IllegalArgumentException("Неверная команда.")
+    }
+}
+
+// Функция main
+fun main() {
+    var lastPerson: Person? = null
+
+    println("Введите команду (введите 'help' для справки):")
+
+    while (true) {
+        try {
+            val command = readCommand()
+            println("Введенная команда: $command")
+
+            when (command) {
+                is AddCommand -> {
+                    if (command.isValid()) {
+                        lastPerson = command.person
+                        println("Добавлено: $lastPerson")
+                    } else {
+                        println("Неверный формат данных. Используйте 'help' для получения справки.")
+                    }
+                }
+                ShowCommand -> {
+                    if (lastPerson != null) {
+                        println("Последний введенный человек: $lastPerson")
+                    } else {
+                        println("Not initialized")
+                    }
+                }
+            }
+        } catch (e: IllegalArgumentException) {
+            when (e.message) {
+                "help" -> {
+                    println("Доступные команды:")
+                    println("exit - выход из программы")
+                    println("help - показать это сообщение")
+                    println("add <Имя> phone <Номер телефона> - добавить номер телефона")
+                    println("add <Имя> email <Адрес электронной почты> - добавить адрес электронной почты")
+                    println("show - показать последнюю добавленную информацию")
+                }
+                else -> {
+                    println("Неверная команда. Используйте 'help' для получения справки.")
+                }
+            }
+        }
+    }
+}
