@@ -1,0 +1,127 @@
+package org.example
+
+import kotlin.system.exitProcess
+
+sealed interface Command {
+    fun isValid(): Boolean
+}
+
+data class Person(val name: String, val phones: MutableList<String> = mutableListOf(), val emails: MutableList<String> = mutableListOf())
+
+sealed class AddCommand(val personName: String, val value: String) : Command {
+    override fun isValid(): Boolean {
+        return when (this) {
+            is Phone -> phoneRegex.matches(value)
+            is Email -> emailRegex.matches(value)
+        }
+    }
+
+    class Phone(personName: String, value: String) : AddCommand(personName, value)
+    class Email(personName: String, value: String) : AddCommand(personName, value)
+}
+
+object ShowCommand : Command {
+    lateinit var personName: String
+    override fun isValid(): Boolean = true
+}
+
+object FindCommand : Command {
+    lateinit var value: String
+    override fun isValid(): Boolean = true
+}
+
+val phoneRegex = Regex("^\\+?\\d+$")
+val emailRegex = Regex("^[a-zA-Z]+@[a-zA-Z]+\\.[a-zA-Z]+$")
+
+fun readCommand(people: MutableMap<String, Person>): Command {
+    val input = readlnOrNull() ?: return ShowCommand
+    val commandParts = input.split(" ")
+    return when (commandParts[0].lowercase()) {
+        "add" -> {
+            if (commandParts.size < 4) throw IllegalArgumentException("Неверная команда.")
+            val name = commandParts[1]
+            val type = commandParts[2]
+            val value = commandParts[3]
+            when (type) {
+                "phone" -> AddCommand.Phone(name, value)
+                "email" -> AddCommand.Email(name, value)
+                else -> throw IllegalArgumentException("Неверный тип команды.")
+            }
+        }
+        "show" -> {
+            if (commandParts.size < 2) throw IllegalArgumentException("Неверная команда.")
+            ShowCommand.apply { personName = commandParts[1] }
+        }
+        "find" -> {
+            if (commandParts.size < 2) throw IllegalArgumentException("Неверная команда.")
+            FindCommand.apply { value = commandParts[1] }
+        }
+        "exit" -> exitProcess(0)
+        "help" -> throw IllegalArgumentException("help")
+        else -> throw IllegalArgumentException("Неверная команда.")
+    }
+}
+
+fun main() {
+    val people = mutableMapOf<String, Person>()
+    println("Введите команду (введите 'help' для справки):")
+    while (true) {
+        try {
+            val command = readCommand(people)
+            println("Введенная команда: $command")
+            when (command) {
+                is AddCommand -> {
+                    if (command.isValid()) {
+                        val person = people.getOrPut(command.personName) { Person(command.personName) }
+                        when (command) {
+                            is AddCommand.Phone -> person.phones.add(command.value)
+                            is AddCommand.Email -> person.emails.add(command.value)
+                        }
+                        people[command.personName] = person
+                        println("Добавлено: $person")
+                    } else {
+                        println("Неверный формат данных. Используйте 'help' для получения справки.")
+                    }
+                }
+                is ShowCommand -> {
+                    val person = people[command.personName]
+                    if (person != null) {
+                        println("Информация о ${person.name}:")
+                        println("Телефоны: ${person.phones.joinToString(", ") { it }}")
+                        println("Email: ${person.emails.joinToString(", ") { it }}")
+                    } else {
+                        println("Человек с именем '${command.personName}' не найден.")
+                    }
+                }
+                is FindCommand -> {
+                    val foundPeople = people.values.filter {
+                        it.phones.contains(FindCommand.value) || it.emails.contains(FindCommand.value)
+                    }
+                    if (foundPeople.isNotEmpty()) {
+                        println("Найденные люди:")
+                        for (foundPerson in foundPeople) {
+                            println(foundPerson.name)
+                        }
+                    } else {
+                        println("Люди с указанным значением не найдены.")
+                    }
+                }
+            }
+        } catch (e: IllegalArgumentException) {
+            when (e.message) {
+                "help" -> {
+                    println("Доступные команды:")
+                    println("exit - выход из программы")
+                    println("help - показать это сообщение")
+                    println("add <Имя> phone <Номер телефона> - добавить номер телефона")
+                    println("add <Имя> email <Адрес электронной почты> - добавить адрес электронной почты")
+                    println("show <Имя> - показать информацию о человеке")
+                    println("find <Телефон или Email> - найти людей по номеру телефона или email")
+                }
+                else -> {
+                    println("Неверная команда. Используйте 'help' для получения справки.")
+                }
+            }
+        }
+    }
+}
